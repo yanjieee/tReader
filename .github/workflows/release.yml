@@ -55,10 +55,20 @@ jobs:
         COMMIT=$(git rev-parse --short HEAD)
         BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
         
+        echo "Building for ${{ matrix.goos }}/${{ matrix.goarch }}"
+        echo "Version: ${VERSION}"
+        echo "Commit: ${COMMIT}"
+        echo "Build Time: ${BUILD_TIME}"
+        
         # 构建时注入版本信息
         go build \
           -ldflags="-s -w -X 'main.Version=${VERSION}' -X 'main.GitCommit=${COMMIT}' -X 'main.BuildTime=${BUILD_TIME}'" \
           -o dist/tReader-${{ matrix.suffix }} .
+        
+        # 验证文件是否创建成功
+        echo "Built file info:"
+        ls -la dist/tReader-${{ matrix.suffix }}
+        file dist/tReader-${{ matrix.suffix }} || true
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -81,18 +91,30 @@ jobs:
     - name: Prepare release files
       run: |
         cd dist
+        # 显示下载的文件结构
+        echo "=== Downloaded artifacts structure ==="
+        find . -type f -name "*" | head -20
+        
         # 将所有二进制文件移到同一目录
         find . -name "tReader-*" -type f -exec mv {} . \;
         # 清理空目录
         find . -type d -empty -delete
-        ls -la
+        
+        echo "=== Final files for release ==="
+        ls -la tReader-*
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/tReader-*
+        files: |
+          dist/tReader-linux-amd64
+          dist/tReader-linux-arm64
+          dist/tReader-windows-amd64.exe
+          dist/tReader-darwin-amd64
+          dist/tReader-darwin-arm64
         generate_release_notes: true
         draft: false
         prerelease: false
+        fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

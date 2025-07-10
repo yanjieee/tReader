@@ -1,0 +1,53 @@
+name: Test Build
+
+on:
+  workflow_dispatch: # 手动触发
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24.3'
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Test build for Linux
+      run: |
+        echo "Testing simple build..."
+        go build -o tReader-test .
+        ls -la tReader-test
+        ./tReader-test --version
+        rm tReader-test
+
+    - name: Test cross-compilation
+      run: |
+        echo "Testing cross-compilation..."
+        
+        # Linux AMD64
+        GOOS=linux GOARCH=amd64 go build -o tReader-linux-amd64 .
+        ls -la tReader-linux-amd64
+        
+        # Windows AMD64
+        GOOS=windows GOARCH=amd64 go build -o tReader-windows-amd64.exe .
+        ls -la tReader-windows-amd64.exe
+        
+        # macOS ARM64
+        GOOS=darwin GOARCH=arm64 go build -o tReader-darwin-arm64 .
+        ls -la tReader-darwin-arm64
+        
+        echo "All builds successful!"
+        
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-binaries
+        path: tReader-* 
