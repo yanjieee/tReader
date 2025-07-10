@@ -86,22 +86,31 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: dist
+        path: artifacts
 
     - name: Prepare release files
       run: |
-        cd dist
+        mkdir -p dist
+        
         # 显示下载的文件结构
         echo "=== Downloaded artifacts structure ==="
-        find . -type f -name "*" | head -20
+        find artifacts -type f -name "*" | head -20
         
-        # 将所有二进制文件移到同一目录
-        find . -name "tReader-*" -type f -exec mv {} . \;
-        # 清理空目录
-        find . -type d -empty -delete
+        # 将所有二进制文件移到dist目录
+        find artifacts -name "tReader-*" -type f -exec cp {} dist/ \;
         
         echo "=== Final files for release ==="
-        ls -la tReader-*
+        ls -la dist/
+        
+        # 验证所有文件都存在
+        for file in tReader-linux-amd64 tReader-linux-arm64 tReader-windows-amd64.exe tReader-darwin-amd64 tReader-darwin-arm64; do
+          if [ -f "dist/$file" ]; then
+            echo "✅ Found: dist/$file"
+            ls -la "dist/$file"
+          else
+            echo "❌ Missing: dist/$file"
+          fi
+        done
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
