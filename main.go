@@ -144,7 +144,7 @@ func (a *App) createSearchInput() {
 		SetPlaceholder("输入要搜索的文字...").
 		SetFieldBackgroundColor(tcell.ColorBlack).
 		SetFieldTextColor(tcell.ColorWhite)
-	
+
 	a.searchInput.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
 			searchText := a.searchInput.GetText()
@@ -176,7 +176,7 @@ func (a *App) hideSearchInput() {
 
 func (a *App) searchNovel(searchText string) {
 	searchText = strings.ToLower(searchText)
-	
+
 	for i, line := range a.novelContent {
 		if strings.Contains(strings.ToLower(line), searchText) {
 			a.currentNovelLine = i
@@ -331,11 +331,11 @@ func (a *App) createMainView() *tview.TextView {
 
 func (a *App) createLayout() *tview.Flex {
 	a.layout = tview.NewFlex().SetDirection(tview.FlexRow)
-	
+
 	// 主视图
 	mainView := a.createMainView()
 	a.layout.AddItem(mainView, 0, 1, true)
-	
+
 	return a.layout
 }
 
@@ -403,7 +403,7 @@ func (a *App) setupKeyBindings() {
 		if a.searchMode {
 			return event
 		}
-		
+
 		switch {
 		case event.Key() == tcell.KeyRune && event.Rune() == '/':
 			a.showSearchInput()
@@ -495,8 +495,32 @@ func (a *App) Run() error {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	var novelFile string
+	// 检查命令行参数
 	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--version", "-v":
+			printVersion()
+			return
+		case "--help", "-h":
+			fmt.Println("tReader - 终端小说阅读器")
+			fmt.Println("使用方法: ./tReader [选项] [文件路径]")
+			fmt.Println("")
+			fmt.Println("选项:")
+			fmt.Println("  -v, --version    显示版本信息")
+			fmt.Println("  -h, --help       显示帮助信息")
+			fmt.Println("")
+			fmt.Println("快捷键:")
+			fmt.Println("  h                切换阅读模式（老板键）")
+			fmt.Println("  j/k 或 ↑↓       滚动小说内容")
+			fmt.Println("  [/]              调节透明度")
+			fmt.Println("  /                搜索文本")
+			fmt.Println("  Ctrl+C           退出程序")
+			return
+		}
+	}
+
+	var novelFile string
+	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
 		novelFile = os.Args[1]
 	}
 
