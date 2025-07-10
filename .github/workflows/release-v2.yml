@@ -1,0 +1,84 @@
+name: Release v2
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24.3'
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Build all platforms
+      run: |
+        mkdir -p release
+        
+        # 获取版本信息
+        VERSION=${GITHUB_REF#refs/tags/}
+        COMMIT=$(git rev-parse --short HEAD)
+        BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        
+        echo "Building version: ${VERSION}"
+        echo "Commit: ${COMMIT}"
+        echo "Build time: ${BUILD_TIME}"
+        
+        # 构建所有平台
+        platforms=(
+          "linux/amd64"
+          "linux/arm64" 
+          "windows/amd64"
+          "darwin/amd64"
+          "darwin/arm64"
+        )
+        
+        for platform in "${platforms[@]}"; do
+          IFS='/' read -r GOOS GOARCH <<< "$platform"
+          
+          if [ "$GOOS" = "windows" ]; then
+            output="release/tReader-${GOOS}-${GOARCH}.exe"
+          else
+            output="release/tReader-${GOOS}-${GOARCH}"
+          fi
+          
+          echo "Building for $GOOS/$GOARCH -> $output"
+          
+          env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
+            -ldflags="-s -w -X 'main.Version=${VERSION}' -X 'main.GitCommit=${COMMIT}' -X 'main.BuildTime=${BUILD_TIME}'" \
+            -o "$output" .
+          
+          if [ -f "$output" ]; then
+            echo "✅ Successfully built: $output"
+            ls -la "$output"
+          else
+            echo "❌ Failed to build: $output"
+            exit 1
+          fi
+        done
+        
+        echo "=== All built files ==="
+        ls -la release/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
